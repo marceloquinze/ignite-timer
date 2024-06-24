@@ -11,7 +11,8 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { differenceInSeconds } from 'date-fns'
 
 const newCycleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Please, type a task'),
@@ -29,15 +30,32 @@ interface Cycle {
   id: string // Cycle ID
   task: string
   minutesAmount: number
+  startDate: Date
 }
 
 type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>
 
 export function Home() {
-  // States
+  // Hooks
   const [cycles, setCycles] = useState<Cycle[]>([]) // This state is an array of cycles and starts as an array of cycles
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
   const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
+
+  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
+
+  useEffect(() => {
+    let interval: number
+    if (activeCycle) {
+      interval = setInterval(() => {
+        setAmountSecondsPassed(
+          differenceInSeconds(new Date(), activeCycle.startDate),
+        )
+      }, 1000)
+    }
+    return () => {
+      clearInterval(interval)
+    }
+  }, [activeCycle])
 
   // React Hook Form methods
   const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
@@ -54,6 +72,7 @@ export function Home() {
       id: String(new Date().getTime()),
       task: data.task,
       minutesAmount: data.minutesAmount,
+      startDate: new Date(),
     }
 
     // Every time I'm changing a state that depends on its previous version, this state value needs
@@ -63,12 +82,14 @@ export function Home() {
     // See: https://app.rocketseat.com.br/classroom/projeto-02/group/funcionalidades-da-aplicacao/lesson/iniciando-novo-ciclo
 
     setActiveCycleId(newCycle.id)
+    setAmountSecondsPassed(0)
+
+    reset()
   }
 
   // Auxiliary variables
   const task = watch('task')
   const isSubmitDisabled = !task
-  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
   const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
   const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
   const minutesAmount = Math.floor(currentSeconds / 60)
