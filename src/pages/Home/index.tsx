@@ -11,20 +11,34 @@ import {
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
+import { useState } from 'react'
 
 const newCycleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Please, type a task'),
   minutesAmount: zod.number().min(5).max(60),
 })
 
+// Interfaces
+
 // interface NewCycleFormData {
 //   task: string
 //   minutesAmount: number
 // }
 
+interface Cycle {
+  id: string // Cycle ID
+  task: string
+  minutesAmount: number
+}
+
 type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>
 
 export function Home() {
+  // States
+  const [cycles, setCycles] = useState<Cycle[]>([]) // This state is an array of cycles and starts as an array of cycles
+  const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
+  const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
+
   // React Hook Form methods
   const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
     resolver: zodResolver(newCycleFormValidationSchema),
@@ -34,13 +48,33 @@ export function Home() {
     },
   })
 
+  // Handles and functions
+  function handleCreateNewCycle(data: NewCycleFormData) {
+    const newCycle: Cycle = {
+      id: String(new Date().getTime()),
+      task: data.task,
+      minutesAmount: data.minutesAmount,
+    }
+
+    // Every time I'm changing a state that depends on its previous version, this state value needs
+    // to be set as an arrow function (closure). So instead of:
+    // setCycles([...cycles, newCycle]), we'll have it like the code below, where (state) means the actual state:
+    setCycles((state) => [...state, newCycle])
+    // See: https://app.rocketseat.com.br/classroom/projeto-02/group/funcionalidades-da-aplicacao/lesson/iniciando-novo-ciclo
+
+    setActiveCycleId(newCycle.id)
+  }
+
   // Auxiliary variables
   const task = watch('task')
   const isSubmitDisabled = !task
-  function handleCreateNewCycle(data: NewCycleFormData) {
-    console.log(data)
-    reset()
-  }
+  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
+  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
+  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
+  const minutesAmount = Math.floor(currentSeconds / 60)
+  const secondsAmount = currentSeconds % 60
+  const minutes = String(minutesAmount).padStart(2, '0')
+  const seconds = String(secondsAmount).padStart(2, '0')
 
   return (
     <HomeContainer>
@@ -76,11 +110,11 @@ export function Home() {
         </FormContainer>
 
         <CountdownContainer>
-          <span>0</span>
-          <span>0</span>
+          <span>{minutes[0]}</span>
+          <span>{minutes[1]}</span>
           <Separator>:</Separator>
-          <span>0</span>
-          <span>0</span>
+          <span>{seconds[0]}</span>
+          <span>{seconds[1]}</span>
         </CountdownContainer>
 
         <StartCountdownButton disabled={isSubmitDisabled} type="submit">
