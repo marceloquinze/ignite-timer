@@ -1,18 +1,10 @@
 import { ReactNode, createContext, useReducer, useState } from 'react'
+import { ActionTypes, Cycle, cyclesReducer } from '../reducers/cycles/reducer'
 
 // Interfaces
 interface CreateCycleData {
   task: string
   minutesAmount: number
-}
-
-interface Cycle {
-  id: string // Cycle ID
-  task: string
-  minutesAmount: number
-  startDate: Date
-  interruptedDate?: Date
-  finishedDate?: Date
 }
 
 // Context Interface
@@ -34,66 +26,15 @@ interface CyclesContextProviderProps {
   children: ReactNode
 }
 
-interface CyclesState {
-  cycles: Cycle[]
-  activeCycleId: string | null
-}
-
 export function CyclesContextProvider({
   children,
 }: CyclesContextProviderProps) {
   // Hooks
   // This state is an array of cycles and starts as an array of cycles
-  const [cyclesState, dispatch] = useReducer(
-    (state: CyclesState, action: any) => {
-      // state corresponds to the same value as the cyclesState variable. Inside the reducer, we always call it 'state'
-      // it can contain a simple state, or more objects (in this case, look at the interface above)
-      // dispatch is a function used to trigger the useReducer action, not a function that alters the state as in useState
-      // every action goes within an if or switch block. So, when we say dispatch('blabla'), 'blabla' corresponds to one of the actions below
-
-      switch (action.type) {
-        case 'ADD_NEW_CYCLE':
-          // The new value the state will receive whenever the action is triggered
-          return {
-            ...state,
-            cycles: [...state.cycles, action.payload.newCycle],
-            activeCycleId: action.payload.newCycle.id,
-          }
-        case 'INTERRUPT_NEW_CYCLE':
-          return {
-            ...state,
-            cycles: state.cycles.map((cycle) => {
-              if (cycle.id === state.activeCycleId) {
-                return { ...cycle, interruptedDate: new Date() }
-              } else {
-                return cycle
-              }
-            }),
-            activeCycleId: null,
-          }
-        case 'MARK_CURRENT_CYCLE_AS_FINISHED':
-          return {
-            ...state,
-            cycles: state.cycles.map((cycle) => {
-              if (cycle.id === state.activeCycleId) {
-                return { ...cycle, finishedDate: new Date() }
-              } else {
-                return cycle
-              }
-            }),
-            activeCycleId: null,
-          }
-
-        // By default, return the state itself
-        default:
-          return state
-      }
-    },
-    {
-      cycles: [],
-      activeCycleId: null,
-    },
-  ) // initial state of the reducer
+  const [cyclesState, dispatch] = useReducer(cyclesReducer, {
+    cycles: [],
+    activeCycleId: null,
+  }) // initial state of the reducer
 
   const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
 
@@ -107,7 +48,7 @@ export function CyclesContextProvider({
 
   function markCurrentCycleAsFinished() {
     dispatch({
-      type: 'MARK_CURRENT_CYCLE_AS_FINISHED',
+      type: ActionTypes.MARK_CURRENT_CYCLE_AS_FINISHED,
       payload: {
         activeCycleId,
       },
@@ -138,7 +79,7 @@ export function CyclesContextProvider({
     // See: https://app.rocketseat.com.br/classroom/projeto-02/group/funcionalidades-da-aplicacao/lesson/iniciando-novo-ciclo
 
     dispatch({
-      type: 'ADD_NEW_CYCLE',
+      type: ActionTypes.ADD_NEW_CYCLE,
       payload: {
         newCycle,
       },
@@ -148,7 +89,7 @@ export function CyclesContextProvider({
 
   function interruptCurrentCycle() {
     dispatch({
-      type: 'INTERRUPT_NEW_CYCLE',
+      type: ActionTypes.INTERRUPT_CURRENT_CYCLE,
       payload: {
         activeCycleId,
       },
